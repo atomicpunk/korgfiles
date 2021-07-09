@@ -14,7 +14,6 @@ import os
 import string
 import struct
 import re
-from datetime import datetime, timedelta
 import argparse
 import mmap
 
@@ -22,7 +21,7 @@ def extract_sng_file(data, start):
 	name = data[start+0x70:start+0x80]
 	if not name.isascii():
 		return False
-	name = name.decode().strip().replace(' ', '_')
+	name = (' '.join(name.decode().strip().split())).replace(' ', '_')
 	b1, b2, b3 = struct.unpack('xBBB', data[start+0x6c:start+0x70])
 	size = (b1 * 0x10000) + (b2 * 0x100) + b3 - 93476
 	for i in range(1, 1002):
@@ -56,6 +55,27 @@ def extract_pcg_file(data, start):
 	print('%s: %d bytes' % (file, size))
 	return True
 
+def extract_ksf_file(data, start):
+	name = data[start+0x8:start+0x18]
+	if not name.isascii():
+		return False
+	name = (' '.join(name.decode().strip().split())).replace(' ', '_')
+	if name.upper().endswith('.KSF'):
+		name = name[0:-4]
+	b1, b2 = struct.unpack('>II', data[start+0x20:start+0x28])
+	size = b1 + b2 + 0x42
+	for i in range(1, 1002):
+		if i > 1000:
+			return False
+		file = (name if i == 1 else ('%s%d' % (name, i))) + '.KSF'
+		if not os.path.exists(file):
+			break
+	fp = open(file, 'wb')
+	fp.write(data[start:start+size])
+	fp.close()
+	print('%s: %d bytes' % (file, size))
+	return True
+
 def extract_unknown_file(data, start):
 	print('%11d: %s' % (start, data[start:start+100]))
 	return False
@@ -78,6 +98,8 @@ def find_in_file(file, tgt):
 			extract_sng_file(data, match.start())
 		elif tgt == 'pcg':
 			extract_pcg_file(data, match.start())
+		elif tgt == 'ksf':
+			extract_ksf_file(data, match.start())
 		else:
 			extract_unknown_file(data, match.start())
 	fp.close()
