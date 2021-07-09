@@ -17,6 +17,9 @@ import re
 import argparse
 import mmap
 
+maxdups = 10000
+maxbytes = 100000
+
 def extract_sng_file(data, start):
 	name = data[start+0x70:start+0x80]
 	if not name.isascii():
@@ -24,8 +27,8 @@ def extract_sng_file(data, start):
 	name = (' '.join(name.decode().strip().split())).replace(' ', '_')
 	b1, b2, b3 = struct.unpack('xBBB', data[start+0x6c:start+0x70])
 	size = (b1 * 0x10000) + (b2 * 0x100) + b3 - 93476
-	for i in range(1, 1002):
-		if i > 1000:
+	for i in range(1, maxdups + 2):
+		if i > maxdups:
 			return False
 		file = (name if i == 1 else ('%s%d' % (name, i))) + '.SNG'
 		if not os.path.exists(file):
@@ -43,8 +46,8 @@ def extract_pcg_file(data, start):
 	size = b1 + b2 + b3 + b4 + b5 + b6 + 0x50
 	if size > 1000000:
 		return False
-	for i in range(1, 1002):
-		if i > 1000:
+	for i in range(1, maxdups + 2):
+		if i > maxdups:
 			return False
 		file = (name if i == 1 else ('%s%d' % (name, i))) + '.PCG'
 		if not os.path.exists(file):
@@ -71,8 +74,8 @@ def extract_ksf_file(data, start):
 		if match and match.start() + 0x30 < size:
 			size = match.start() + 0x30
 			suffix = '-DMG.KSF'
-	for i in range(1, 1002):
-		if i > 1000:
+	for i in range(1, maxdups + 2):
+		if i > maxdups:
 			return False
 		file = (name if i == 1 else ('%s%d' % (name, i))) + suffix
 		if not os.path.exists(file):
@@ -86,15 +89,38 @@ def extract_ksf_file(data, start):
 		print('%s: %d bytes' % (file, size))
 	return True
 
+def extract_kmp_file(data, start):
+	name = data[start+0x8:start+0x18]
+	if not name.isascii():
+		return False
+	name = (' '.join(name.decode().strip().split())).replace(' ', '_')
+	if name.upper().endswith('.KMP'):
+		name = name[0:-4]
+	match = re.search(b'\x00\x00\x00\x00', data[start:start+maxbytes])
+	if not match:
+		return False
+	size = match.start()
+	for i in range(1, maxdups + 2):
+		if i > maxdups:
+			return False
+		file = (name if i == 1 else ('%s%d' % (name, i))) + '.KMP'
+		if not os.path.exists(file):
+			break
+	fp = open(file, 'wb')
+	fp.write(data[start:start+size])
+	fp.close()
+	print('%s: %d bytes' % (file, size))
+	return True
+
 def extract_ksc_file(data, start):
-	for sz in range(0, 100001):
-		if sz > 100000:
+	for sz in range(0, maxbytes + 2):
+		if sz > maxbytes:
 			return False
 		if not data[start+sz:start+sz+1].isascii() or data[start+sz] == 0:
 			break
 	name = 'KORG'
-	for i in range(1, 1002):
-		if i > 1000:
+	for i in range(1, maxdups + 2):
+		if i > maxdups:
 			return False
 		file = (name if i == 1 else ('%s%d' % (name, i))) + '.KSC'
 		if not os.path.exists(file):
@@ -129,6 +155,8 @@ def find_in_file(file, tgt):
 			extract_pcg_file(data, match.start())
 		elif tgt == 'ksf':
 			extract_ksf_file(data, match.start())
+		elif tgt == 'kmp':
+			extract_kmp_file(data, match.start())
 		elif tgt == 'ksc':
 			extract_ksc_file(data, match.start())
 		else:
