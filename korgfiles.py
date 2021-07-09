@@ -76,6 +76,25 @@ def extract_ksf_file(data, start):
 	print('%s: %d bytes' % (file, size))
 	return True
 
+def extract_ksc_file(data, start):
+	for sz in range(0, 100001):
+		if sz > 100000:
+			return False
+		if not data[start+sz:start+sz+1].isascii() or data[start+sz] == 0:
+			break
+	name = 'KORG'
+	for i in range(1, 1002):
+		if i > 1000:
+			return False
+		file = (name if i == 1 else ('%s%d' % (name, i))) + '.KSC'
+		if not os.path.exists(file):
+			break
+	fp = open(file, 'wb')
+	fp.write(data[start:start+sz])
+	fp.close()
+	print('%s: %d bytes' % (file, sz))
+	return True
+
 def extract_unknown_file(data, start):
 	print('%11d: %s' % (start, data[start:start+100]))
 	return False
@@ -100,6 +119,8 @@ def find_in_file(file, tgt):
 			extract_pcg_file(data, match.start())
 		elif tgt == 'ksf':
 			extract_ksf_file(data, match.start())
+		elif tgt == 'ksc':
+			extract_ksc_file(data, match.start())
 		else:
 			extract_unknown_file(data, match.start())
 	fp.close()
