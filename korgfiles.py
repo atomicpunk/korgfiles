@@ -59,21 +59,31 @@ def extract_ksf_file(data, start):
 	name = data[start+0x8:start+0x18]
 	if not name.isascii():
 		return False
+	suffix = '.KSF'
 	name = (' '.join(name.decode().strip().split())).replace(' ', '_')
 	if name.upper().endswith('.KSF'):
 		name = name[0:-4]
 	b1, b2 = struct.unpack('>II', data[start+0x20:start+0x28])
 	size = b1 + b2 + 0x42
+	# try to salvage any damaged ksf snippets
+	for tgt in [b'KORG', b'SMP1', b'MSP1']:
+		match = re.search(tgt, data[start+0x30:start+size])
+		if match and match.start() + 0x30 < size:
+			size = match.start() + 0x30
+			suffix = '-DMG.KSF'
 	for i in range(1, 1002):
 		if i > 1000:
 			return False
-		file = (name if i == 1 else ('%s%d' % (name, i))) + '.KSF'
+		file = (name if i == 1 else ('%s%d' % (name, i))) + suffix
 		if not os.path.exists(file):
 			break
 	fp = open(file, 'wb')
 	fp.write(data[start:start+size])
 	fp.close()
-	print('%s: %d bytes' % (file, size))
+	if 'DMG' in suffix:
+		print('%s (damaged): %d bytes' % (file, size))
+	else:
+		print('%s: %d bytes' % (file, size))
 	return True
 
 def extract_ksc_file(data, start):
