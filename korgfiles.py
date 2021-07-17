@@ -20,6 +20,10 @@ import mmap
 maxdups = 10000
 maxbytes = 100000
 
+def doError(msg):
+	print('ERROR: %s' % msg)
+	sys.exit(1)
+
 def extract_sng_file(data, start):
 	name = data[start+0x70:start+0x80]
 	if not name.isascii():
@@ -163,14 +167,37 @@ def find_in_file(file, tgt):
 			extract_unknown_file(data, match.start())
 	fp.close()
 
+def ksf2wav(file):
+	print(file)
+
 if __name__ == '__main__':
 	import argparse
 
 	parser = argparse.ArgumentParser()
-	parser.add_argument('diskimage',
-		help='image file or device with partition data in it')
-	parser.add_argument('filetype', choices=['sng', 'pcg', 'ksc', 'ksf', 'kmp'],
-		help='korg filetype to extract')
-	args = parser.parse_args()
+	subparse = parser.add_subparsers(help='command to run')
 
-	find_in_file(args.diskimage, args.filetype)
+	parse1 = subparse.add_parser('extract', help='extract korg files from a disk image')
+	parse1.add_argument('diskimage',
+		help='image file with partition data in it')
+	parse1.add_argument('filetype', choices=['sng', 'pcg', 'ksc', 'ksf', 'kmp'],
+		help='korg filetype to extract')
+
+	parse2 = subparse.add_parser('ksf2wav', help='convert a ksf sound file to wav')
+	parse2.add_argument('ksffile', nargs='+',
+		help='ksf sound file(s) to convert to wav(s)')
+
+	args = parser.parse_args()
+	vlist = vars(args)
+
+	if 'diskimage' in vlist:
+		if not os.path.exists(args.diskimage):
+			doError('file does not exist - %s' % args.diskimage)
+		find_in_file(args.diskimage, args.filetype)
+	elif 'ksffile' in vlist:
+		for file in args.ksffile:
+			if not os.path.exists(file):
+				doError('file does not exist - %s' % file)
+			ksf2wav(file)
+	else:
+		parser.print_help()
+		sys.exit(1)

@@ -1,13 +1,29 @@
 # korgfiles
 
-KORG File Extractor
+KORG File Tool
 
-Extract Korg data files from a disk image or device
+usage: korgfiles [-h] {command} ...
 
-This tool is designed to recover korg data files from old disks and disk
-images that may no longer be mountable. The tool takes in the path of a
-disk image or the device id of an unmounted partition and searches the disk
-for files, whether they've been deleted ot not.
+Run various commands on korg files:
+- extract (exctract korg files from a disk image)
+- ksf2wav (convert ksf files to wavs)
+
+------------------------------------------------------------------
+|                          EXTRACT                               |
+------------------------------------------------------------------
+
+Extract Korg data files from a disk image (extracted from a device with dd)
+
+%> korgfiles extract <diskimage> <filetype>
+
+This command is designed to recover korg data files from old disks that may
+no longer be mountable or with deleted data you want back. The input is a disk
+image of the hard drive created using dd.
+
+%> dd if=/dev/sda1 of=mydisk.img bs=1M
+
+The tool takes in the path of a disk image and searches the disk for files,
+whether they've been deleted ot not.
 
 The tool is run on any of five types of korg files: SNG, PCG, KSC, KSF, KMP.
 The extracted files are placed in the current folder, and any name collisions
@@ -20,7 +36,7 @@ Thes files include midi note data.
 Korg sng files have built in name and size encoding so they're relatively
 easy to extract. As long as the header is intact the file should be recoverable.
 
-%> korgfiles diskimage sng
+%> korgfiles extract <diskimage> sng
 
 [Korg PCG files]
 
@@ -30,7 +46,7 @@ Korg pcg files have built in size encoding but their names are only stored in th
 FAT. Thus when PCG files are extracted they're simply named "KORG.PCG". You'll
 have to load them to figure out which songs they pair with.
 
-%> korgfiles diskimage pcg
+%> korgfiles extract <diskimage> pcg
 
 [Korg KSF files]
 
@@ -43,7 +59,7 @@ overwritten, the tool attempts to identify damaged KSF files. These are files
 whose sizes don't match but have at least some usable sound data in them. They're
 saved as NAME-DMG.KSF to differentiate between the complete files.
 
-%> korgfiles diskimage ksf
+%> korgfiles extract <diskimage> ksf
 
 [Korg KSC files]
 
@@ -53,7 +69,7 @@ Korg ksc files are just text files, so they're fairly easy to identify. The
 output KSC file may occasionally have some junk data if it was partially
 overwritten after delete, but they can be editted in a text editor.
 
-%> korgfiles diskimage ksc
+%> korgfiles extract <diskimage> ksc
 
 [Korg KMP files]
 
@@ -64,4 +80,11 @@ tool just does its best to identify the end of the KMP file but it may
 occasionally have junk at the end. These files typically aren't very useful
 anyway because they depend on fixed ksf filenames which this tool cannot retrieve.
 
-%> korgfiles diskimage kmp
+%> korgfiles extract <diskimage> kmp
+
+
+------------------------------------------------------------------
+|                          KSF2WAV                               |
+------------------------------------------------------------------
+
+TODO
