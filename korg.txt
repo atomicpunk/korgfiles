@@ -1,0 +1,179 @@
+[KSF vs WAV FILE]
+
+-- size --
+
+KSF SIZE = 26 bytes + WAV SIZE
+
+-- header --
+
+KSF HEADER (0x3c bytes):
+
+00000000  53 4d 50 31 00 00 00 20  4a 4c 4f 4f 50 34 41 20  |SMP1... JLOOP4A |
+00000010  20 20 20 20 20 20 20 20  03 00 00 00 00 00 00 00  |        ........|
+00000020  00 01 f3 f0 00 01 f3 f4  53 4d 44 31 00 03 e7 f6  |........SMD1....|
+00000030  00 00 ac 44 20 00 01 10  00 01 f3 f5              |...D ...........|
+
+0x00: 53 4d 50 31 ("SMP1")
+0x04: 00 00 00 20
+0x08:             (16 byte sample name)
+0x18: 00 00 00 00 (first byte can be 0 - 3 for some reason)
+0x1c: 00 00 00 00
+0x20:             (number of samples: (filesize - 70) / 2)
+0x24:             (number or samples + 4)
+0x28: 53 4d 44 31 ("SMD1")
+0x2c:             (file size - 48 bytes)
+0x30: 00 00 ac 44 (sample rate = 44100)
+0x34: 20 00 01 10
+0x38:             (number or samples + 5)
+
+WAV HEADER (0x2c bytes):
+
+00000000  52 49 46 46 04 e8 03 00  57 41 56 45 66 6d 74 20  |RIFF....WAVEfmt |
+00000010  10 00 00 00 01 00 01 00  44 ac 00 00 88 58 01 00  |........D....X..|
+00000020  02 00 10 00 64 61 74 61  e0 e7 03 00              |....data........|
+
+0x00: 52 49 46 46 ("RIFF")
+0x04:             (filesize - 8 bytes, little endian)
+0x08: 57 41 56 45 ("WAVE")
+0x08: 66 6d 74 20 ("fmt ")
+0x10: 10 00 00 00 (16 bit PCM chunk size)
+0x14: 01 00       (audio format is PCM)
+0x16: 01 00       (number of channels is 1)
+0x18: 44 ac 00 00 (sample rate is 44100)
+0x1c: 88 58 01 00 (byte rate: sample rate * numchan * bytespersamp = 44100 * 1 * 2 = 88200)
+0x20: 02 00       (block align: numchan * bytespersamp = 1 * 2 = 2)
+0x22: 10 00       (bits per sample = 16 for short)
+0x24: 64 61 74 61 ("data")
+0x28:             (filesize - 44 bytes, little endian)
+
+-- data --
+
+starts at 0x3c
+KSF = 2byte values, big endian (no swapping needed)
+
+starts at 0x2c
+WAV = 2byte values, little endian (swapping needed)
+
+-- footer --
+
+KSF = append 10 0 bytes to the end
+WAV = no
+
+[SNG FILE]
+
+Identity from first 7 bytes: b'KORG;\x01\x01'
+ 0   1   2   3   4   5   6 
+"K" "O" "R" "G" ";" x01 x01
+
+File size from VALUE:
+VALUE = 3byte value at 0x6d or 109
+Can use either formula (use 1st to be safe)
+1) SIZE = DECVAL - 93476
+2) SIZE = DECVAL - 93508
+
+NAME = 16 bytes at 0x70
+
+SONG           SIZE     HEXVAL  DECVAL   DSIZE    DVAL    FORMULA   HEADER
+--------------------------------------------------------------------------
+WHISPER.SNG    4352  ff 017e24   97828   0        0       1        4b 4f 52 47 3b 01 01 02 
+IMEAN.SNG      4670  ff 017f62   98146   318      318     1        4b 4f 52 47 3b 01 01 02
+AREGRET.SNG    6338  ff 0185e6   99814   1986     1986    1        4b 4f 52 47 3b 01 01 02
+GOTWORK.SNG    7154  ff 018936  100662   2802     2834     2       4b 4f 52 47 3b 01 01 02
+GLASCITY.SNG  10250  ff 01954e  103758   5898     5930     2       4b 4f 52 47 3b 01 01 02
+THEEND.SNG    12362  ff 019d8e  105870   8010     8042     2       4b 4f 52 47 3b 01 01 02
+STUFF.SNG     12830  ff 019f62  106338   8478     8510     2       4b 4f 52 47 3b 01 01 02
+2AM.SNG       15182  ff 01a892  108690   10830    10862    2       4b 4f 52 47 3b 01 01 02
+NEWFILE.SNG   15188  ff 01a898  108696   10836    10868    2       4b 4f 52 47 3b 01 01 02
+PAPRTHIN.SNG  19472  ff 01b934  112948   15120    15120   1        4b 4f 52 47 3b 01 01 05 
+SAME.SNG      19520  ff 01b984  113028   15168    15200    2       4b 4f 52 47 3b 01 01 02
+RANDOM2.SNG   32252  ff 01eb20  125728   27900    27900   1        4b 4f 52 47 3b 01 01 05
+TWINSEN.SNG   32702  ff 01ed02  126210   28350    28382    2       4b 4f 52 47 3b 01 01 05
+MYEYES.SNG    52568  ff 023a7c  146044   48216    48216   1        4b 4f 52 47 3b 01 01 05 
+FATIGUE.SNG   61388  ff 025cf0  154864   57036    57036   1        4b 4f 52 47 3b 01 01 05
+FRUITION.SNG  85400  ff 02babc  178876   81048    81048   1        4b 4f 52 47 3b 01 01 05
+SWEETZ.SNG    90584  ff 02cefc  184060   86232    86232   1        4b 4f 52 47 3b 01 01 05
+TRIPPY1.SNG  126026  ff 03596e  219502   121674   121674  1        4b 4f 52 47 3b 01 01 05
+TRIPPY3.SNG  126026  ff 03596e  219502   121674   121674  1        4b 4f 52 47 3b 01 01 05
+CONTAXZ1.SNG 159638  ff 03dcba  253114   155286   155286  1        4b 4f 52 47 3b 01 01 05
+CONTAXZ3.SNG 173054  ff 041122  266530   168702   168702  1        4b 4f 52 47 3b 01 01 05
+
+[PCG FILE]
+
+Identity from first 7 bytes: b'KORG;\x00\x00'
+ 0   1   2   3   4   5   6 
+"K" "O" "R" "G" ";" x00 x00
+
+File size from 6 VALUES:
+V1 = 4byte value at 0x24
+V2 = 4byte value at 0x2c
+V3 = 4byte value at 0x34
+V4 = 4byte value at 0x3c
+V5 = 4byte value at 0x44
+V6 = 4byte value at 0x4c
+
+SIZE = V1 + V2 + V3 + V4 + V5 + V6 + 0x50
+
+TRIPPY.PCG  522541
+00000020  00 00 00 04 00036208  00 01 00 01 00010482  |......b.........|
+00000030  00 02 00 04 00030808  00 03 00 18 000085b2  |................|
+00000040  00 04 00 01 00000499  ff ff 00 00 00000000  |................|
+
+GOTWORK.PCG  522541
+00000020  00 00 00 04 00036208  00 01 00 01 00010482  |......b.........|
+00000030  00 02 00 04 00030808  00 03 00 18 000085b2  |................|
+00000040  00 04 00 01 00000499  ff ff 00 00 00000000  |................|
+
+THEBEAT.PCG  89732
+00000020  00 00 00 01 0000d882  ff ff 00 00 00000000  |................|
+00000030  ff ff 00 00 00000000  00 03 00 18 000085b2  |................|
+00000040  ff ff 00 00 00000000  ff ff 00 00 00000000  |................|
+
+TEE.PCG   34306
+00000020  ff ff 00 00 00000000  ff ff 00 00 00000000  |................|
+00000030  ff ff 00 00 00000000  00 03 00 18 000085b2  |................|
+00000040  ff ff 00 00 00000000  ff ff 00 00 00000000  |................|
+
+[KSC FILE]
+
+Identity from first 12 bytes: b'#KORG Script'
+ 0   1   2   3   4   5   6   7   8   9   10  11
+"#" "K" "O" "R" "G" " " "S" "c" "r" "i" "p" "t"
+or "#KORG Script"
+
+SIZE = iterate til a NULL char or non ascii char is found
+
+[KSF FILE]
+
+Identity from first 8 bytes: b'SMP1\x00\x00\x00\x20'
+ 0   1   2   3   4   5   6   7
+"S" "M" "P" "1" x00 x00 x00 x20
+
+File size from 6 VALUES:
+V1 = 4byte value at 0x20
+V2 = 4byte value at 0x24
+
+NAME = 16 bytes at 0x8
+
+SIZE = V1 + V2 + 0x42
+
+DS___000.KSF   30336 (30270)
+00000000  53 4d 50 31 00 00 00 20  42 41 53 53 44 52 31 20  |SMP1... BASSDR1 |
+00000010  20 20 20 20 20 20 20 20  00 00 00 00 00 00 00 00  |        ........|
+00000020  00 00 3b 1d 00 00 3b 21  53 4d 44 31 00 00 76 50  |..;...;!SMD1..vP|
+
+DS___025.KSF   9040 (8974)
+00000000  53 4d 50 31 00 00 00 20  53 4e 41 52 45 32 20 20  |SMP1... SNARE2  |
+00000010  20 20 20 20 20 20 20 20  00 00 00 00 00 00 00 00  |        ........|
+00000020  00 00 11 85 00 00 11 89  53 4d 44 31 00 00 23 20  |........SMD1..# |
+
+DS___008.KSF 165378 (165312)
+00000000  53 4d 50 31 00 00 00 20  43 4c 41 43 4b 20 20 20  |SMP1... CLACK   |
+00000010  20 20 20 20 20 20 20 20  00 00 00 00 00 00 00 00  |        ........|
+00000020  00 01 42 de 00 01 42 e2  53 4d 44 31 00 02 85 d2  |..B...B.SMD1....|
+
+
+[KMP FILE]
+
+Identity from first 8 bytes: b'MSP1\x00\x00\x00\x12'
+ 0   1   2   3   4   5   6   7
+"M" "S" "P" "1" x00 x00 x00 x12
