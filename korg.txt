@@ -3,6 +3,8 @@
 -- size --
 
 KSF SIZE = 26 bytes + WAV SIZE
+WAV SIZE = KSF SIZE - 26 bytes
+WAV SIZE = (num_samples * 2) + 44
 
 -- header --
 

@@ -17,12 +17,21 @@ import re
 import argparse
 import mmap
 
-maxdups = 10000
-maxbytes = 100000
-
-def doError(msg):
+def doError(msg, fatal=True):
 	print('ERROR: %s' % msg)
-	sys.exit(1)
+	if fatal:
+		sys.exit(1)
+
+def unused_file_name(name, ext):
+	maxdups = 10000
+	file = ''
+	for i in range(1, maxdups + 2):
+		if i > maxdups:
+			return ''
+		file = (name if i == 1 else ('%s%d' % (name, i))) + ext
+		if not os.path.exists(file):
+			break
+	return file
 
 def extract_sng_file(data, start):
 	name = data[start+0x70:start+0x80]
@@ -31,12 +40,9 @@ def extract_sng_file(data, start):
 	name = (' '.join(name.decode().strip().split())).replace(' ', '_')
 	b1, b2, b3 = struct.unpack('xBBB', data[start+0x6c:start+0x70])
 	size = (b1 * 0x10000) + (b2 * 0x100) + b3 - 93476
-	for i in range(1, maxdups + 2):
-		if i > maxdups:
-			return False
-		file = (name if i == 1 else ('%s%d' % (name, i))) + '.SNG'
-		if not os.path.exists(file):
-			break
+	file = unused_file_name(name, '.SNG')
+	if not file:
+		return False
 	fp = open(file, 'wb')
 	fp.write(data[start:start+size])
 	fp.close()
@@ -50,12 +56,9 @@ def extract_pcg_file(data, start):
 	size = b1 + b2 + b3 + b4 + b5 + b6 + 0x50
 	if size > 1000000:
 		return False
-	for i in range(1, maxdups + 2):
-		if i > maxdups:
-			return False
-		file = (name if i == 1 else ('%s%d' % (name, i))) + '.PCG'
-		if not os.path.exists(file):
-			break
+	file = unused_file_name(name, '.PCG')
+	if not file:
+		return False
 	fp = open(file, 'wb')
 	fp.write(data[start:start+size])
 	fp.close()
@@ -78,12 +81,9 @@ def extract_ksf_file(data, start):
 		if match and match.start() + 0x30 < size:
 			size = match.start() + 0x30
 			suffix = '-DMG.KSF'
-	for i in range(1, maxdups + 2):
-		if i > maxdups:
-			return False
-		file = (name if i == 1 else ('%s%d' % (name, i))) + suffix
-		if not os.path.exists(file):
-			break
+	file = unused_file_name(name, suffix)
+	if not file:
+		return False
 	fp = open(file, 'wb')
 	fp.write(data[start:start+size])
 	fp.close()
@@ -94,22 +94,21 @@ def extract_ksf_file(data, start):
 	return True
 
 def extract_kmp_file(data, start):
+	maxbytes = 100000
 	name = data[start+0x8:start+0x18]
 	if not name.isascii():
 		return False
 	name = (' '.join(name.decode().strip().split())).replace(' ', '_')
 	if name.upper().endswith('.KMP'):
 		name = name[0:-4]
-	match = re.search(b'\x00\x00\x00\x00', data[start:start+maxbytes])
+	end = start + maxbytes if start + maxbytes < len(data) else len(data)
+	match = re.search(b'\x00\x00\x00\x00', data[start:end])
 	if not match:
 		return False
 	size = match.start()
-	for i in range(1, maxdups + 2):
-		if i > maxdups:
-			return False
-		file = (name if i == 1 else ('%s%d' % (name, i))) + '.KMP'
-		if not os.path.exists(file):
-			break
+	file = unused_file_name(name, '.KMP')
+	if not file:
+		return False
 	fp = open(file, 'wb')
 	fp.write(data[start:start+size])
 	fp.close()
@@ -117,18 +116,16 @@ def extract_kmp_file(data, start):
 	return True
 
 def extract_ksc_file(data, start):
+	maxbytes = 100000
 	for sz in range(0, maxbytes + 2):
 		if sz > maxbytes:
 			return False
 		if not data[start+sz:start+sz+1].isascii() or data[start+sz] == 0:
 			break
 	name = 'KORG'
-	for i in range(1, maxdups + 2):
-		if i > maxdups:
-			return False
-		file = (name if i == 1 else ('%s%d' % (name, i))) + '.KSC'
-		if not os.path.exists(file):
-			break
+	file = unused_file_name(name, '.KSC')
+	if not file:
+		return False
 	fp = open(file, 'wb')
 	fp.write(data[start:start+sz])
 	fp.close()
@@ -167,8 +164,60 @@ def find_in_file(file, tgt):
 			extract_unknown_file(data, match.start())
 	fp.close()
 
-def ksf2wav(file):
-	print(file)
+def ksf2wav(file, args):
+	# read in the ksf file data
+	fp = open(file, 'rb')
+	data = fp.read()
+	fp.close()
+
+	# check file size
+	filesize = len(data)
+	if filesize < 74:
+		doError('%s is not large enough to be usable (%d bytes)' % \
+			(file, filesize), False)
+		return False
+
+	# verify this is a ksf file
+	h1, h2 = data[0:4].decode(), data[40:44].decode()
+	if h1 != 'SMP1' or h2 != 'SMD1':
+		doError('%s is not a korg sample file (KSF)' % file, False)
+		return False
+
+	# extract size data and verify enough data exists
+	samples, val1, fsize, rate, val2, val3 = struct.unpack('>IIxxxxIIII',
+		data[32:60])
+	if (filesize - 60) < (samples * 2) or rate > 200000:
+		doError('ksf file %s is corrupt' % file, False)
+		return False
+
+	# determine the name & size of the output wav file
+	name = data[7:24].decode().strip()
+	if args.keepname or not name:
+		name = os.path.basename(file).upper().replace('.KSF', '')
+	else:
+		name = (' '.join(name.split())).replace(' ', '_')
+	wavfile = unused_file_name(name, '.WAV')
+	if not wavfile:
+		doError('could not find an unused wav file name for %s' % file, False)
+		return False
+	wavsize = (samples * 2) + 44
+
+	print('KSF IN : %s (%d bytes)' % (os.path.basename(file), filesize))
+	print('WAV OUT: %s (%d bytes)' % (wavfile, wavsize))
+
+	# write the WAV format header
+	header = struct.pack('<4sI8sIHHIIHH4sI', b'RIFF', wavsize - 8, b'WAVEfmt ',
+		0x10, 1, 1, rate, rate * 2, 2, 0x10, b'data', wavsize - 44)
+	fp = open(wavfile, 'wb')
+	fp.write(header)
+
+	# write the WAV sound data
+	for c in range(samples):
+		i = (c * 2) + 60
+		sample = struct.unpack('>H', data[i:i+2])[0]
+		fp.write(struct.pack('<H', sample))
+	fp.close()
+	return True
 
 if __name__ == '__main__':
 	import argparse
@@ -185,6 +234,8 @@ if __name__ == '__main__':
 	parse2 = subparse.add_parser('ksf2wav', help='convert a ksf sound file to wav')
 	parse2.add_argument('ksffile', nargs='+',
 		help='ksf sound file(s) to convert to wav(s)')
+	parse2.add_argument('-keepname', action='store_true',
+		help='keep the ksf filename as the wav filename')
 
 	args = parser.parse_args()
 	vlist = vars(args)
@@ -196,8 +247,8 @@ if __name__ == '__main__':
 	elif 'ksffile' in vlist:
 		for file in args.ksffile:
 			if not os.path.exists(file):
-				doError('file does not exist - %s' % file)
-			ksf2wav(file)
+				doError('file does not exist - %s' % file, False)
+			ksf2wav(file, args)
 	else:
 		parser.print_help()
 		sys.exit(1)
