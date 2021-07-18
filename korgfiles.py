@@ -2,11 +2,17 @@
 #
 # Copyright 2021 Todd Brandt <todd.eric.brandt@gmail.com>
 #
-# Korg File Extractor
+# Korg File Utility
 #
-# Extract korg sng, pcg, ksc, ksf, and kmp files from any disk image
-# or device. The files can even be deleted as the tool does not look
-# at the file allocation tables, it scans the whole memory of the image.
+# Supports commands related to KORG file ma management
+#
+# extract
+# Extract korg sng, pcg, ksc, ksf, and kmp files from any disk image.
+# The files can even be deleted as the tool does not look at the file
+# allocation tables, it scans the whole memory of the image.
+#
+# ksf2wav
+# Convert KORG Sound Files to WAV format
 #
 
 import sys
